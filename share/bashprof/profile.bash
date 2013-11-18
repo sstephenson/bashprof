@@ -5,6 +5,7 @@ enable -f "$BASHPROF_ROOT"/libexec/bashprof/bashprof.dylib utime
 bashprof_log() {
   utime
   echo "program=$BASHPROF_PROGRAM"
+  echo "pid=$$"
   echo "command=$1"
   echo "subshell=$2"
   echo "function=${FUNCNAME[@]:1}"
