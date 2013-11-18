@@ -1,0 +1,25 @@
+bashprof: Bash profiler
+=======================
+
+This is a work in progress! Only works on Mac OS X right now.
+
+Check out bashprof:
+$ git clone https://github.com/sstephenson/bashprof.git
+
+Build the loadable module:
+$ make -C src
+
+Run bashprof with the program you want to profile:
+$ bin/bashprof <command to profile> [<arg> ...]
+
+The bashprof command injects a stub bash executable into your path and
+execs the command you pass. Any Bash scripts executed by the given
+command will be profiled, so long as they have a `#!/usr/bin/env bash`
+shebang line.
+
+Profile results are written to bashprof.$$.log in the current
+directory, where $$ is the PID of the bashprof process.
+
+-----
+(c) 2013 Sam Stephenson
+MIT licensed

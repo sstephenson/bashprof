@@ -1,0 +1,5 @@
+#!/usr/bin/env /bin/sh
+
+export BASH_ENV="$BASHPROF_ROOT"/share/bashprof/env.bash
+export BASHPROF_PROGRAM="$@"
+exec "$BASHPROF_BASH" "$@"
