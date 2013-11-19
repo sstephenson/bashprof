@@ -5,12 +5,18 @@ enable -f "$BASHPROF_ROOT"/libexec/bashprof/bashprof.dylib utime
 bashprof_log() {
   utime
   echo "program=$BASHPROF_PROGRAM"
+  echo "statement=${1//$'\n'/\\n}"
+  echo "function=${FUNCNAME[1]}"
+  echo "filename=${BASH_SOURCE[1]}"
+  echo "lineno=${BASH_LINENO[0]}"
+
+  # The following information is not currently used by the formatter
   echo "pid=$$"
-  echo "command=$1"
   echo "subshell=$2"
-  echo "function=${FUNCNAME[@]:1}"
-  echo "filename=${BASH_SOURCE[@]:1}"
-  echo "lineno=${BASH_LINENO[@]::${#FUNCNAME[@]}-1}"
+  echo "caller_functions=${FUNCNAME[@]:2}"
+  echo "caller_filenames=${BASH_SOURCE[@]:2}"
+  echo "caller_linenos=${BASH_LINENO[@]:1:${#FUNCNAME[@]}-2}"
+
 } >>"$BASHPROF_OUT"
 
 profile() {

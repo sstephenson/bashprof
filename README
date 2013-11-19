@@ -17,8 +17,7 @@ execs the command you pass. Any Bash scripts executed by the given
 command will be profiled, so long as they have a `#!/usr/bin/env bash`
 shebang line.
 
-Profile results are written to bashprof.$$.log in the current
-directory, where $$ is the PID of the bashprof process.
+Formatted profile results are written to stderr.
 
 -----
 (c) 2013 Sam Stephenson

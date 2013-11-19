@@ -1,0 +1,130 @@
+#!/usr/bin/awk -f
+
+BEGIN {
+  FS = "="
+  record_count = 0
+}
+
+function read_timestamp(timestamp) {
+  compute_record_duration(timestamp)
+  properties[++record_count, "timestamp"] = timestamp
+}
+
+function read_property(name, value) {
+  properties[record_count, name] = value
+}
+
+function compute_record_duration(timestamp, previous_timestamp, command) {
+  if (previous_timestamp = properties[record_count, "timestamp"]) {
+    properties[record_count, "duration"] = timestamp - previous_timestamp
+  }
+}
+
+/^[[:digit:]]/ {
+  read_timestamp(substr($1, 4))
+}
+
+$2 ~ /./ {
+  value = substr($0, index($0, "=") + 1)
+  read_property($1, value)
+}
+
+function key_for_record(record, filename, lineno, statement) {
+  filename  = properties[record, "filename"]
+  lineno    = properties[record, "lineno"]
+  statement = properties[record, "statement"]
+  return filename ":" lineno ":" statement
+}
+
+function group_records(record, key, group) {
+  for (record = 1; record < record_count; record++) {
+    key = key_for_record(record)
+
+    if (group = groups[key]) {
+      groups[key] = group " " record
+    } else {
+      groups[key] = record
+    }
+  }
+}
+
+function sum_group_durations(key, group, i, record, group_duration) {
+  for (key in groups) {
+    group_duration = 0
+    split(groups[key], group, " ")
+
+    for (i in group) {
+      record = group[i]
+      group_duration += properties[record, "duration"]
+    }
+
+    durations[key] = sprintf("%d", group_duration * 1000000)
+    total_duration += durations[key]
+  }
+}
+
+function sort_groups_by_duration(i, j, k, swap) {
+  for (i in durations) {
+    sorted_groups[++group_count] = i
+  }
+
+  for (i = 1; i <= group_count; j = ++i) {
+    for (k = i + 1; k <= group_count; k++) {
+      if (durations[sorted_groups[j]] < durations[sorted_groups[k]]) {
+        j = k
+      }
+    }
+
+    if (i != j) {
+      swap = sorted_groups[i]
+      sorted_groups[i] = sorted_groups[j]
+      sorted_groups[j] = swap
+    }
+  }
+}
+
+function print_sorted_groups(i, key) {
+  print_header()
+  for (i = 1; i <= group_count; i++) {
+    key = sorted_groups[i]
+    print_group(key)
+  }
+}
+
+function print_header() {
+  print "Total µs  Total %  Count  Statement"
+}
+
+function print_group(key, duration, group, record, count, statement, filename, lineno) {
+  duration   = durations[key]
+  percentage = sprintf("%2.1f", duration * 100 / total_duration)
+
+  split(groups[key], group, " ")
+  for (key in group) count++
+
+  record    = group[1]
+  statement = properties[record, "statement"]
+  filename  = format_filename(properties[record, "filename"])
+  lineno    = properties[record, "lineno"]
+
+  if (filename) {
+    printf("%8d  %6s%%  %5d  %s\n", duration, percentage, count, statement)
+    printf("%25s %s:%s\n", "", filename, lineno)
+  }
+}
+
+function format_filename(filename, home) {
+  if (home = ENVIRON["HOME"]) {
+    if (index(filename, home "/") == 1) {
+      filename = "~" substr(filename, length(home) + 1)
+    }
+  }
+  return filename
+}
+
+END {
+  group_records()
+  sum_group_durations()
+  sort_groups_by_duration()
+  print_sorted_groups()
+}

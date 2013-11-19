@@ -20,7 +20,17 @@ abs_dirname() {
 
 export BASHPROF_ROOT="$(abs_dirname "$(abs_dirname "$0")")"
 export BASHPROF_BASH="$BASH"
-export BASHPROF_OUT="bashprof.$$.log"
 
-export PATH="$BASHPROF_ROOT/libexec/bashprof:$PATH"
-exec "$@"
+enable -f "$BASHPROF_ROOT"/libexec/bashprof/bashprof.dylib utime
+
+[ -d "$TMPDIR" ] && TMPDIR="/tmp"
+export BASHPROF_OUT="$TMPDIR/bashprof.$$.log"
+
+PATH="$BASHPROF_ROOT/libexec/bashprof:$PATH" "$@"
+status="$?"
+utime >>"$BASHPROF_OUT"
+
+"$BASHPROF_ROOT"/libexec/bashprof/bashprof-format-results <"$BASHPROF_OUT" >&2
+rm -f "$BASHPROF_OUT"
+
+exit "$status"
