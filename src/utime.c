@@ -5,7 +5,7 @@
 int utime_builtin(WORD_LIST *arguments) {
   struct timeval now;
   gettimeofday(&now, NULL);
-  fprintf(stdout, "%ld.%d\n", now.tv_sec, now.tv_usec);
+  fprintf(stdout, "%ld.%06d\n", now.tv_sec, now.tv_usec);
   fflush(stdout);
   return EXECUTION_SUCCESS;
 }
