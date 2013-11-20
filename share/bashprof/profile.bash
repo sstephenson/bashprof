@@ -20,7 +20,6 @@ bashprof_log() {
 } >>"$BASHPROF_OUT"
 
 profile() {
-  local trap="$(trap debug)"
   set -T
-  trap "bashprof_log \"\$BASH_COMMAND\" \"\$BASH_SUBSHELL\"; $trap" debug
+  trap "bashprof_log \"\$BASH_COMMAND\" \"\$BASH_SUBSHELL\"" debug
 }

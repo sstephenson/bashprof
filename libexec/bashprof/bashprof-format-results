@@ -29,87 +29,181 @@ $2 ~ /./ {
   read_property($1, value)
 }
 
-function key_for_record(record, filename, lineno, statement) {
+function key_for_command_group(record, filename, lineno, statement) {
   filename  = properties[record, "filename"]
   lineno    = properties[record, "lineno"]
   statement = properties[record, "statement"]
   return filename ":" lineno ":" statement
 }
 
-function group_records(record, key, group) {
+function group_records_by_command(record, key, group) {
   for (record = 1; record < record_count; record++) {
-    key = key_for_record(record)
+    key = key_for_command_group(record)
 
-    if (group = groups[key]) {
-      groups[key] = group " " record
+    if (group = command_groups[key]) {
+      command_groups[key] = group " " record
     } else {
-      groups[key] = record
+      command_groups[key] = record
     }
   }
 }
 
-function sum_group_durations(key, group, i, record, group_duration) {
-  for (key in groups) {
+function keys_for_function_group(keys, record, filename, functionn, caller_filenames, caller_functions, i, count) {
+  filename  = properties[record, "filename"]
+  functionn = properties[record, "function"]
+  if (functionn == "main") return 0
+  keys[1] = filename ":" functionn
+
+  split(properties[record, "caller_filenames"], caller_filenames, " ")
+  split(properties[record, "caller_functions"], caller_functions, " ")
+  for (i in caller_functions) count++
+
+  for (i = 1; i < count; i++) {
+    filename  = caller_filenames[i]
+    functionn = caller_functions[i]
+    keys[i + 1] = filename ":" functionn
+  }
+
+  count = 0
+  for (i in keys) count++
+  return count
+}
+
+function group_records_by_function(record, keys, count, i, key, group) {
+  for (record = 1; record < record_count; record++) {
+    count = keys_for_function_group(keys, record)
+
+    for (i = 1; i <= count; i++) {
+      key = keys[i]
+      if (group = function_groups[key]) {
+        function_groups[key] = group " " record
+      } else {
+        function_groups[key] = record
+      }
+    }
+  }
+}
+
+function sum_command_group_durations(key, group, i, record, group_duration) {
+  total_duration = sum_group_durations(command_durations, command_groups)
+}
+
+function sum_function_group_durations(key, group, i, record, group_duration) {
+  sum_group_durations(function_durations, function_groups)
+}
+
+function sum_group_durations(result_array, group_array, duration, group_duration, group, i, record) {
+  for (key in group_array) {
     group_duration = 0
-    split(groups[key], group, " ")
+    split(group_array[key], group, " ")
 
     for (i in group) {
       record = group[i]
       group_duration += properties[record, "duration"]
     }
 
-    durations[key] = sprintf("%d", group_duration * 1000000)
-    total_duration += durations[key]
+    result_array[key] = sprintf("%d", group_duration * 1000000)
+    duration += result_array[key]
   }
+
+  return duration
 }
 
-function sort_groups_by_duration(i, j, k, swap) {
-  for (i in durations) {
-    sorted_groups[++group_count] = i
-  }
+function sort_command_groups_by_duration() {
+  command_group_count = reverse_sort(sorted_command_groups, command_durations)
+}
 
-  for (i = 1; i <= group_count; j = ++i) {
-    for (k = i + 1; k <= group_count; k++) {
-      if (durations[sorted_groups[j]] < durations[sorted_groups[k]]) {
+function sort_function_groups_by_duration() {
+  function_group_count = reverse_sort(sorted_function_groups, function_durations)
+}
+
+function reverse_sort(result_array, value_array, count, i, j, k) {
+  for (i in value_array)
+    result_array[++count] = i
+
+  for (i = 1; i <= count; i++) {
+    j = i
+
+    for (k = i + 1; k <= count; k++)
+      if (value_array[result_array[j]] < value_array[result_array[k]])
         j = k
-      }
-    }
 
     if (i != j) {
-      swap = sorted_groups[i]
-      sorted_groups[i] = sorted_groups[j]
-      sorted_groups[j] = swap
+      k = result_array[i]
+      result_array[i] = result_array[j]
+      result_array[j] = k
     }
   }
+
+  return count
 }
 
-function print_sorted_groups(i, key) {
-  print_header()
-  for (i = 1; i <= group_count; i++) {
-    key = sorted_groups[i]
-    print_group(key)
+function print_sorted_command_groups(i, key) {
+  print_command_header()
+  for (i = 1; i <= command_group_count; i++) {
+    key = sorted_command_groups[i]
+    print_command_group(key)
   }
 }
 
-function print_header() {
+function print_sorted_function_groups(i, key) {
+  print_function_header()
+  for (i = 1; i <= function_group_count; i++) {
+    key = sorted_function_groups[i]
+    print_function_group(key)
+  }
+}
+
+function print_command_header() {
+  print ""
+  print "Statement breakdown"
+  print "==================="
+  print ""
   print "Total µs  Total %  Count  Statement"
 }
 
-function print_group(key, duration, group, record, count, statement, filename, lineno) {
-  duration   = durations[key]
+function print_function_header() {
+  print ""
+  print "Function breakdown"
+  print "=================="
+  print ""
+  print "Total µs  Total %  Count  Function"
+}
+
+function print_command_group(key, duration, percentage, group, record, count, statement, filename, lineno) {
+  duration   = command_durations[key]
   percentage = sprintf("%2.1f", duration * 100 / total_duration)
 
-  split(groups[key], group, " ")
+  split(command_groups[key], group, " ")
   for (key in group) count++
 
   record    = group[1]
   statement = properties[record, "statement"]
-  filename  = format_filename(properties[record, "filename"])
+  filename  = properties[record, "filename"]
   lineno    = properties[record, "lineno"]
 
   if (filename) {
     printf("%8d  %6s%%  %5d  %s\n", duration, percentage, count, statement)
-    printf("%25s %s:%s\n", "", filename, lineno)
+    printf("%25s %s:%s\n", "", format_filename(filename), lineno)
+  }
+}
+
+function print_function_group(key, duration, percentage, group, record, count, functionn, filename) {
+  duration   = function_durations[key]
+  percentage = sprintf("%2.1f", duration * 100 / total_duration)
+
+  split(function_groups[key], group, " ")
+  record    = group[1]
+  functionn = properties[record, "function"]
+  filename  = properties[record, "filename"]
+
+  for (key in group)
+    if (properties[group[key], "function"] == functionn)
+      count++
+
+  if (filename) {
+    printf("%8d  %6s%%  %5d  %s\n", duration, percentage, count, functionn)
+    printf("%25s %s\n", "", format_filename(filename))
   }
 }
 
@@ -123,8 +217,15 @@ function format_filename(filename, home) {
 }
 
 END {
-  group_records()
-  sum_group_durations()
-  sort_groups_by_duration()
-  print_sorted_groups()
+  group_records_by_command()
+  sum_command_group_durations()
+  sort_command_groups_by_duration()
+  print_sorted_command_groups()
+
+  group_records_by_function()
+  sum_function_group_durations()
+  sort_function_groups_by_duration()
+  print_sorted_function_groups()
+
+  print ""
 }
